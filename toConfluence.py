@@ -34,7 +34,7 @@ from markdownify import MarkdownConverter
 
 from curlx import CurlX, Response
 
-version = '2.3.2'
+version = '2.3.4'
 
 #
 #   When including the RSACipher module, user password may be encrypted and stored in the config file
@@ -209,7 +209,8 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
                 message = ''
             title = pageData["title"]
             ancestors = pageData['ancestors']
-            parentPageId = ancestors[len(ancestors) - 1]['id']
+            if len(ancestors) > 0:
+                parentPageId = ancestors[len(ancestors) - 1]['id']
             target = 'orangesharing' if 'orangesharing' in url else 'confluence'
             author = pageData['version']['by']['displayName']
             lastupdate = pageData['version']['when']
@@ -857,7 +858,7 @@ def main():
     parser.add_argument("-o", "--OrangeSharing", required=False, action='store_true',
                         help="specify the OrangeSharing as Confluence site and pass the JSESSIONID")
     parser.add_argument('-k', '--spaceKey', default='EAO',
-                        help="specify the Confluence Space key - default is 'EAO'")
+                        help="specify the Confluence Space cd distkey - default is 'EAO'")
     parser.add_argument('-m', '--markdown', required=False, action='store_true',
                         help="force to convert file from markdown to Confluence wiki")
     parser.add_argument('-t', '--test', required=False, action='store_true',

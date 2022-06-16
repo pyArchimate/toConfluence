@@ -4,5 +4,3 @@ urllib3
 pywin32
 configobj
 pycurl
-azure-identity
-azure-storage-blob

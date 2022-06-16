@@ -34,7 +34,7 @@ from markdownify import MarkdownConverter
 
 from curlx import CurlX, Response
 
-version = '2.3.1'
+version = '2.3.2'
 
 #
 #   When including the RSACipher module, user password may be encrypted and stored in the config file
@@ -762,24 +762,24 @@ class mdplus(MarkdownConverter):
         self.nrow = 0
         self.ncol = 0
 
-    def convert_span(self, el, text):
+    def convert_span(self, el, text, *args):
         color = el.get('style')
         return '<span style=\"' + color + '\">' + text + '</span>' if color else text
 
-    def convert_table(self, el, text):
+    def convert_table(self, el, text, *args):
         self.nrow = 0
         self.ncol = 0
         return text.replace('|\n |', '|\n|')
 
-    def convert_tr(self, el, text):
+    def convert_tr(self, el, text, *args):
         self.nrow += 1
         return '\n|' + text + '\n' + '|--' * self.ncol + '|\n' if self.nrow == 1 else '|' + text + '\n'
 
-    def convert_th(self, el, text):
+    def convert_th(self, el, text, *args):
         self.ncol += 1
         return text.replace('\n', '') + '|'
 
-    def convert_td(self, el, text):
+    def convert_td(self, el, text, *args):
         return text.replace('\n', '') + '|'
 
 
@@ -833,7 +833,7 @@ def download_confluence(docPath=None, title=None, pageId=None, spaceKey=None):
                  f' version="{version}" author="{author}" lastupdate="{lastupdate}">\n\n' + docContent
 
     filename = join(docPath, title + '.md') if docPath else title + '.md'
-    with open(filename, 'w') as fd:
+    with open(filename, 'w', encoding='utf-8') as fd:
         fd.write(docContent)
     print(f'Downloaded file {filename}')
 

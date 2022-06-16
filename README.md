@@ -1,3 +1,4 @@
+<meta wiki="confluence" pageId="1141443909" title="README" parentId="1141443776" version="2" author="XY56RE" lastupdate="">
 # 'toConfluence': Tool to upload Markdown documents in Confluence
 
 ## Introduction

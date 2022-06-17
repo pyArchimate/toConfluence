@@ -5,3 +5,4 @@ configobj
 # pycurl~=7.43.0.5
 requests
 urllib3
+pycryptodome

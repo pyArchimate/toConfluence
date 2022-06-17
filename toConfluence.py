@@ -35,26 +35,25 @@ from markdownify import MarkdownConverter
 
 # from curlx import CurlX, Response
 
-version = '2.3.4'
+version = '2.3.5'
 
 #
 #   When including the RSACipher module, user password may be encrypted and stored in the config file
 #   As this is not ING compliant, the module has been removed, but the logic remains in the code
 #
-# try:
-#     from RSAcipher import RSAcipher
-# except:
-#     RSAcipher = None
+try:
+    from RSAcipher import RSAcipher
+except:
+    RSAcipher = None
 
-RSAcipher = None
 SSLVerif = True
 
 if SSLVerif:
     cacerts = 'certs.pem'
+
 else:
     cacerts = False
     from urllib3.exceptions import InsecureRequestWarning
-
     urllib3.disable_warnings(InsecureRequestWarning)
 
 user = None
@@ -138,7 +137,7 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
     # dummy get to log into
     # requests = CurlX( auth=auth, verify=cacerts)
 
-    r = requests.get(url,  auth=auth, verify=cacerts)
+    r = requests.get(url, auth=auth, verify=cacerts)
     if r.status_code != 200:
         # requests.close()
         print("->" + str(r.status_code), r)
@@ -177,7 +176,7 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
     if pageId is None:
         # Search for a confluence page by title
         reqUrl = url + "?title=" + title.replace(" ", "%20") + "&spaceKey=" + spaceKey + "&expand=history,version"
-        r = requests.get(reqUrl,  auth=auth, verify=cacerts)
+        r = requests.get(reqUrl, auth=auth, verify=cacerts)
 
         if r.status_code == 200:
             pageData = json.loads(r.text)
@@ -198,7 +197,7 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
     # if found, open the existing Confluence page
     if pageId is not None:
         reqUrl = url + pageId + "?expand=history,version,ancestors"  # +"?expand=body.storage"
-        r = requests.get(reqUrl,  auth=auth, verify=cacerts)
+        r = requests.get(reqUrl, auth=auth, verify=cacerts)
 
         if r.status_code == 200:
             pageData = json.loads(r.text)
@@ -217,9 +216,10 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
             author = pageData['version']['by']['displayName']
             lastupdate = pageData['version']['when']
             print("Page title: " + title)
-        elif debug:
+        else:
             print('Error opening page with ID ' + str(pageId))
             print(r.status_code)
+            return r.status_code
 
     # or create o new page  under the parent page
     else:
@@ -232,7 +232,8 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
         }
         author = user
         lastupdate = ''
-        r = requests.post(url, data=json.dumps(newPageData),  auth=auth, verify=cacerts)
+        headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+        r = requests.post(url, data=json.dumps(newPageData), auth=auth, verify=cacerts, headers=headers)
 
         if r.status_code == 200:
             # Retrieve the new Page ID
@@ -252,7 +253,7 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
     # get attachments from the target Confluence page
 
     reqUrl = url + str(pageId) + "/child/attachment"
-    r = requests.get(reqUrl,  auth=auth, verify=cacerts)
+    r = requests.get(reqUrl, auth=auth, verify=cacerts)
     if r.status_code == 200:
         pageData = json.loads(r.text)
     else:
@@ -276,8 +277,9 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
                     print('File ' + imgName + ' already exist... updating...')
                     files = {'file': fullpathname, 'minorEdit': 'false', 'comment': md5}
                     r = requests.post(url + pageId + "/child/attachment/" + attId + '/data',
-                                      headers=({'X-Atlassian-Token': 'no-check'}),
-                                      files=files)
+                                      headers={'X-Atlassian-Token': 'no-check'},
+                                      files=files,
+                                      auth=auth, verify=cacerts)
                     if r.status_code != 200:
                         print('Cannot update existing main image - error ' + str(r.status_code))
             elif debug:
@@ -291,8 +293,8 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
             print('Uploading a new file attachment...')
             files = {'file': fullpathname, 'comment': md5}
             r = requests.post(url + pageId + "/child/attachment",
-                              headers=({'X-Atlassian-Token': 'no-check'}),
-                              files=files)
+                              headers={'X-Atlassian-Token': 'no-check'},
+                              files=files, auth=auth, verify=cacerts)
             if r.status_code != 200:
                 print('Cannot create main image - error ' + str(r.status_code))
         # else:
@@ -320,6 +322,8 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
         attName = m.group(1)
         for a in existAtt:
             # print(a['title'] + ": " + a['id'])
+            pass
+        else:
             if attName == a['title']:
                 attId = a['id']
                 try:
@@ -335,14 +339,13 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
                         print('File ' + attName + ' already exist... updating...')
                         files = {'file': fullpathname, 'minorEdit': 'false', 'comment': md5}
                         r = requests.post(url + pageId + "/child/attachment/" + attId + '/data',
-                                          headers=({'X-Atlassian-Token': 'no-check'}),
-                                          files=files)
+                                          headers={'X-Atlassian-Token': 'no-check'},
+                                          files=files, auth=auth, verify=cacerts)
                         if r.status_code != 200:
                             print('Cannot update file attachment - error ' + str(r.status_code))
                 else:
                     print('cannot open file')
                 break
-        else:
             # If the file does not correspond to an attachment, create one new
             print('Uploading a new file attachment ' + attName)
             fullpathname = join(filesPath, attName).replace('%20', ' ')
@@ -350,8 +353,8 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
                 md5 = file_md5(fullpathname)
                 files = {'file': fullpathname, 'minorEdit': 'true', 'comment': md5}
                 r = requests.post(url + pageId + "/child/attachment",
-                                  headers=({'X-Atlassian-Token': 'no-check'}),
-                                  files=files)
+                                  headers={'X-Atlassian-Token': 'no-check'},
+                                  files=files, auth=auth, verify=cacerts)
                 if r.status_code != 200:
                     print('Cannot create file attachment - error ' + str(r.status_code))
             else:
@@ -385,8 +388,8 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
                         print('File ' + attName + ' already exist... updating...')
                         files = {'file': fullpathname, 'minorEdit': 'true', 'comment': md5}
                         r = requests.post(url + pageId + "/child/attachment/" + attId + '/data',
-                                          headers=(['Accept-Language: en', 'X-Atlassian-Token: nocheck']),
-                                          files=files)
+                                          headers={'Accept-Language': 'en', 'X-Atlassian-Token': 'nocheck'},
+                                          files=files, auth=auth, verify=cacerts)
                         if r.status_code != 200:
                             print('error uploading image ' + attId + ' update ' + str(r.status_code))
                             print(r.text)
@@ -398,10 +401,10 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
             fullpathname = join(filesPath, attName).replace('%20', ' ')
             if os.path.exists(fullpathname):
                 md5 = file_md5(fullpathname)
-                files = {'file': fullpathname, 'comment': md5}
+                files = {'file': open(fullpathname, 'rb'), 'comment': md5}
                 r = requests.post(url + pageId + "/child/attachment",
-                                  headers=(['Accept-Language: en', 'X-Atlassian-Token: no-check']),
-                                  files=files)
+                                  headers={'Accept-Language': 'en', 'X-Atlassian-Token': 'no-check'},
+                                  files=files, auth=auth, verify=cacerts)
                 if r.status_code != 200:
                     print('error create image update ' + str(r.status_code))
             else:
@@ -422,8 +425,8 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
 
             r = requests.put(url + pageId,
                              data=json.dumps(newPageData),
-                             headers=({'Content-Type': 'application/json'}),
-                              auth=auth, verify=cacerts
+                             headers={'Content-Type': 'application/json'},
+                             auth=auth, verify=cacerts
                              )
 
             if r.status_code == 200:
@@ -802,7 +805,7 @@ def download_confluence(docPath=None, title=None, pageId=None, spaceKey=None):
     if title:
         # Search for a confluence page by title
         reqUrl = url + "?title=" + title.replace(" ", "%20") + "&spaceKey=" + spaceKey + "&" + param
-        r = requests.get(reqUrl,  auth=auth, verify=cacerts)
+        r = requests.get(reqUrl, auth=auth, verify=cacerts)
         data = r.json()
         if r.status_code == 200:
             results = data['results']
@@ -815,7 +818,7 @@ def download_confluence(docPath=None, title=None, pageId=None, spaceKey=None):
             return r.status_code
 
     elif pageId:
-        r = requests.get(url + str(pageId) + '?' + param,  auth=auth, verify=cacerts)
+        r = requests.get(url + str(pageId) + '?' + param, auth=auth, verify=cacerts)
         code = r.status_code
         data = r.json()
         if r.status_code != 200:
@@ -910,6 +913,9 @@ def main():
     target = 'orangesharing' if args.OrangeSharing else 'confluence'
     try:
         if args.OrangeSharing:
+            print('This option is now temporarily disabled')
+            _exit(1)
+
             try:
                 JSESSIONID = config[target]['JSESSIONID']
             except KeyError:
@@ -928,13 +934,13 @@ def main():
             url = config[target]['url']
             spaceKey = config[target]['spaceKey']
 
-            # test if the proxy is reachable.
-            # with CurlX(proxies=proxy) as requests:
-            resp = requests.get(url=PROXY_URL,  auth=auth, verify=cacerts)
-            if 'Domain name not found' in str(resp.text):
-                isIntranet = False
-                print('Assuming on Internet')
-                proxy = None
+        # test if the proxy is reachable.
+        # with CurlX(proxies=proxy) as requests:
+        resp = requests.get(url='http://'+PROXY_URL, auth=auth, verify=cacerts)
+        if 'Domain name not found' in str(resp.text):
+            isIntranet = False
+            print('Assuming on Internet')
+            proxy = None
 
         else:
             url = config[target]['url']
@@ -947,10 +953,11 @@ def main():
 
     # get user's credentials
     user = getuser()
-    pwd = os.getenv('PWD')
+    pwd = None
+
     # set path to crypto key to decrypt the saved password
     if os.name == 'nt':
-        rsaKey = 'c:/users/' + user + '/' + user
+        rsaKey = os.getenv('USERPROFILE')  + "\\" + os.getenv('USERNAME')
     else:
         rsaKey = '~/.' + user
 
@@ -960,14 +967,22 @@ def main():
             rsa = RSAcipher()
             rsa.create_keyset(rsaKey)
 
+        rsa = RSAcipher(certfile=rsaKey + '.key')
         try:
             # get & decrypt the password
             token = config['token']
-            rsa = RSAcipher(certfile=rsaKey + '.key')
             pwd = rsa.decrypt(token)
         except:
-            pwd = None
-            token = ''
+            pwd = os.getenv('PWD')
+            token = rsa.encrypt(pwd)
+            config['token'] = token
+            config.write()
+
+    if pwd is None or pwd == '':
+        pwd = getpass()
+        if RSAcipher is not None:
+            rsa = RSAcipher(certfile=rsaKey + '.pub')
+            token = rsa.encrypt(pwd)
             config['token'] = token
             config.write()
 
@@ -975,13 +990,8 @@ def main():
         pwd = getpass('Enter password for user ' + user + ": ")
         if args.OrangeSharing:
             proxy = {'proxy_url': PROXY_URL, 'proxy_user': user, 'proxy_pwd': pwd}
-        else:
-            auth = (user, pwd)
-        if RSAcipher is not None:
-            rsa = RSAcipher(certfile=rsaKey + '.pub')
-            token = rsa.encrypt(pwd)
-            config['token'] = token
-            config.write()
+
+    auth = (user, pwd)
 
     if args.pageid:
         pageID = args.pageid
@@ -1046,7 +1056,7 @@ def main():
     else:
         code = upload_confluence(docPath, f, pageID, spaceKey, parentPageID, args.markdown)
 
-    if code == 401 or code == 403 or code == 404:
+    if code == 401 or code == 403:
         print("Authorization failure!")
         if args.OrangeSharing:
             print("Don't forget to paste the JSESSIONID token in the clipboard")
@@ -1057,6 +1067,7 @@ def main():
         _exit(1)
     elif code != 200:
         print(f'html error {code}')
+        _exit(1)
     _exit(0)
 
 

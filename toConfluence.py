@@ -27,12 +27,13 @@ from getpass import getpass, getuser
 from os import listdir, getcwd
 from os.path import isfile, join
 
+import requests
 import urllib3
 import win32clipboard
 from configobj import ConfigObj
 from markdownify import MarkdownConverter
 
-from curlx import CurlX, Response
+# from curlx import CurlX, Response
 
 version = '2.3.4'
 
@@ -53,6 +54,7 @@ if SSLVerif:
 else:
     cacerts = False
     from urllib3.exceptions import InsecureRequestWarning
+
     urllib3.disable_warnings(InsecureRequestWarning)
 
 user = None
@@ -131,14 +133,14 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
     @return: string         - the response status from the last http request
 
     '''
-    r = Response
 
     # verify username and password are valid or _exit
     # dummy get to log into
-    requests = CurlX(proxy=proxy, auth=auth, verify=cacerts, cookies=cookies)
-    r = requests.get(url)
+    # requests = CurlX( auth=auth, verify=cacerts)
+
+    r = requests.get(url,  auth=auth, verify=cacerts)
     if r.status_code != 200:
-        requests.close()
+        # requests.close()
         print("->" + str(r.status_code), r)
         return r.status_code
 
@@ -175,10 +177,10 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
     if pageId is None:
         # Search for a confluence page by title
         reqUrl = url + "?title=" + title.replace(" ", "%20") + "&spaceKey=" + spaceKey + "&expand=history,version"
-        r = requests.get(reqUrl)
+        r = requests.get(reqUrl,  auth=auth, verify=cacerts)
 
         if r.status_code == 200:
-            pageData = json.loads(r.body)
+            pageData = json.loads(r.text)
             results = pageData['results']
             if len(results) == 0:
                 print('page not found')
@@ -196,10 +198,10 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
     # if found, open the existing Confluence page
     if pageId is not None:
         reqUrl = url + pageId + "?expand=history,version,ancestors"  # +"?expand=body.storage"
-        r = requests.get(reqUrl)
+        r = requests.get(reqUrl,  auth=auth, verify=cacerts)
 
         if r.status_code == 200:
-            pageData = json.loads(r.body)
+            pageData = json.loads(r.text)
             doc_version = int(pageData['version']['number']) + 1
             # myBody = pageData['body']['storage']['value']
             # spaceKey = pageData["space"]["key"]
@@ -230,11 +232,11 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
         }
         author = user
         lastupdate = ''
-        r = requests.post(url, data=json.dumps(newPageData))
+        r = requests.post(url, data=json.dumps(newPageData),  auth=auth, verify=cacerts)
 
         if r.status_code == 200:
             # Retrieve the new Page ID
-            results = json.loads(r.body)
+            results = json.loads(r.text)
             if len(results) == 0:
                 print('page not found')
             else:
@@ -242,7 +244,7 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
                 print('New Page ID: ' + pageId)
             doc_version = 2
         else:
-            requests.close()
+            # requests.close()
             return r.status_code
 
     # upload or update the main image associated to the page
@@ -250,12 +252,12 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
     # get attachments from the target Confluence page
 
     reqUrl = url + str(pageId) + "/child/attachment"
-    r = requests.get(reqUrl)
+    r = requests.get(reqUrl,  auth=auth, verify=cacerts)
     if r.status_code == 200:
-        pageData = json.loads(r.body)
+        pageData = json.loads(r.text)
     else:
         print(r.status_code)
-        requests.close()
+        # requests.close()
         return r.status_code
 
     existAtt = pageData['results']
@@ -387,7 +389,7 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
                                           files=files)
                         if r.status_code != 200:
                             print('error uploading image ' + attId + ' update ' + str(r.status_code))
-                            print(r.body)
+                            print(r.text)
                 else:
                     print('Cannot open file')
                 break
@@ -421,6 +423,7 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
             r = requests.put(url + pageId,
                              data=json.dumps(newPageData),
                              headers=({'Content-Type': 'application/json'}),
+                              auth=auth, verify=cacerts
                              )
 
             if r.status_code == 200:
@@ -454,7 +457,7 @@ def upload_confluence(docPath=None, fileName='', pageId=None, spaceKey=None, par
         # }
         # json.dump(jmeta, open(join(docPath, docName + 'meta'), 'w', encoding="utf8"))
 
-    requests.close()
+    # requests.close()
     return r.status_code
 
 
@@ -789,7 +792,7 @@ def md(html, **options):
 
 
 def download_confluence(docPath=None, title=None, pageId=None, spaceKey=None):
-    requests = CurlX(proxy=proxy, auth=auth, verify=False, cookies=cookies)
+    # requests = CurlX( auth=auth, verify=False)
     param = 'expand=body.view,ancestors,version'
     code = ''
     r = None
@@ -799,7 +802,7 @@ def download_confluence(docPath=None, title=None, pageId=None, spaceKey=None):
     if title:
         # Search for a confluence page by title
         reqUrl = url + "?title=" + title.replace(" ", "%20") + "&spaceKey=" + spaceKey + "&" + param
-        r = requests.get(reqUrl)
+        r = requests.get(reqUrl,  auth=auth, verify=cacerts)
         data = r.json()
         if r.status_code == 200:
             results = data['results']
@@ -812,7 +815,7 @@ def download_confluence(docPath=None, title=None, pageId=None, spaceKey=None):
             return r.status_code
 
     elif pageId:
-        r = requests.get(url + str(pageId) + '?' + param)
+        r = requests.get(url + str(pageId) + '?' + param,  auth=auth, verify=cacerts)
         code = r.status_code
         data = r.json()
         if r.status_code != 200:
@@ -839,7 +842,7 @@ def download_confluence(docPath=None, title=None, pageId=None, spaceKey=None):
     print(f'Downloaded file {filename}')
 
     # TODO download figures & attachments & link them in the markdown file
-    requests.close()
+    # requests.close()
     return 200
 
 
@@ -896,6 +899,7 @@ def main():
     if args.test:
         debug = True
 
+    spacekey = None
     if args.spaceKey:
         spaceKey = args.spaceKey
         config['spaceKey'] = args.spaceKey
@@ -925,9 +929,9 @@ def main():
             spaceKey = config[target]['spaceKey']
 
             # test if the proxy is reachable.
-            with CurlX(proxy=proxy) as requests:
-                resp = requests.get(url=PROXY_URL)
-            if 'Domain name not found' in str(resp.body):
+            # with CurlX(proxies=proxy) as requests:
+            resp = requests.get(url=PROXY_URL,  auth=auth, verify=cacerts)
+            if 'Domain name not found' in str(resp.text):
                 isIntranet = False
                 print('Assuming on Internet')
                 proxy = None

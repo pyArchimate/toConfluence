@@ -1,4 +1,4 @@
-# xma test 2
+# toto
 
 Some test page.
 ---

@@ -31,7 +31,7 @@ import urllib3
 import win32clipboard
 from configobj import ConfigObj
 from markdownify import MarkdownConverter
-import requests
+
 from curlx import CurlX, Response
 
 version = '2.3.4'

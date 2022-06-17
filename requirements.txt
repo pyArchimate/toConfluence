@@ -2,6 +2,5 @@ markdownify
 certifi
 pywin32
 configobj
-# pycurl~=7.43.0.5
-requests
+pycurl~=7.43.0.5
 urllib3

@@ -11,7 +11,7 @@ pool:
 strategy:
   matrix:
     Python37:
-      python.version: '3.7'
+      python.version: '3.6'
 
 steps:
 - task: UsePythonVersion@0
@@ -21,7 +21,7 @@ steps:
 
 - script: |
     python -m pip install --upgrade pip
-    pip install -r requirements.txt
+    pip install -r requirements.txt || exit 1
     pip install pyinstaller
     pyinstaller -F toconfluence.py
 - publish: $(System.DefaultWorkingDirectory)/dist/toconfluence.exe

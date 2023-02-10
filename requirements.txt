@@ -2,7 +2,9 @@ markdownify
 certifi
 pywin32
 configobj
-# pycurl~=7.43.0.5
 requests
 urllib3
 pycryptodome
+ntlm-auth
+requests-ntlm2
+pycurl==7.43.0.5

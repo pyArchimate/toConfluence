@@ -1,0 +1,53 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+strategy:
+  matrix:
+    Python37:
+      python.version: '3.7'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '$(python.version)'
+  displayName: 'Use Python $(python.version)'
+
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt || exit 1
+    pip install pyinstaller
+    pyinstaller -F toconfluence.py
+- publish: $(System.DefaultWorkingDirectory)/dist/toconfluence.exe
+  artifact: toconfluence
+  displayName: 'Install dependencies and build'
+
+# - script: |
+#    pip install pytest pytest-azurepipelines
+#    pytest
+#  displayName: 'pytest'
+- task: CopyFiles@2
+  inputs:
+    Contents: '**/dist/toconfluence.exe'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    CleanTargetFolder: true
+    OverWrite: true
+    flattenFolders: true
+
+- task: UniversalPackages@0
+  inputs:
+    command: 'publish'
+    publishDirectory: '$(Build.ArtifactStagingDirectory)'
+    feedsToUsePublish: 'internal'
+    vstsFeedPublish: 'f55d8f82-468c-48a4-8e4b-6a4e99d3e101/bef723e1-71ae-4723-a9c1-34cebb7f26d8'
+    vstsFeedPackagePublish: 'toconfluence'
+    versionOption: 'patch'
+#   versionOption: 'custom'
+#   versionPublish: '2.3.1'
+    packagePublishDescription: 'A program to upload markdown files & attachment to a Confluence page'

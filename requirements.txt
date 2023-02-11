@@ -1,0 +1,10 @@
+markdownify
+certifi
+pywin32
+configobj
+requests
+urllib3
+pycryptodome
+ntlm-auth
+requests-ntlm2
+pycurl==7.43.0.5
